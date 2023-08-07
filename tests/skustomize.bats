@@ -83,7 +83,7 @@ secretGenerator:
 EOF
   run "$SKUST_BIN" build $TEMPDIR
   assert_failure
-  assert_output --partial "invalid literal source ref+sops://$TEMPDIR/secrets.yaml, expected key=value"
+  assert_output --partial "[ERROR]: invalid files source: [ref+sops://secrets.yaml], expected key=value"
 }
 
 @test "it should exit with error if given unsupported scheme" {

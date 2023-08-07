@@ -50,9 +50,27 @@ backup_kust_file() {
   trap 'revert_kust_file' EXIT
 }
 
+VALS_REF_REGEX='((secret)?ref)\+([^\+:]*:\/\/[^\+\n "]+)\+?'
+
+check_vals_ref_uri_by_type() {
+  local count=0
+  while read -r line; do
+    if [[ "$line" =~ ^=?$VALS_REF_REGEX ]]; then
+      echo "[ERROR]: invalid $1 source: [$line], expected key=value"
+      ((count += 1))
+    fi
+  done < <(TYPE="$1" yq '.secretGenerator[][strenv(TYPE)][]' "${KUST_FILES[0]}")
+  [ $count -eq 0 ]
+}
+
+check_vals_ref_uri() {
+  check_vals_ref_uri_by_type "files"
+  check_vals_ref_uri_by_type "literals"
+}
+
 update_kust_file() {
   #shellcheck disable=SC2016
-  WORKDIR="$WORKDIR/" REF_REGEX='((secret)?ref)\+([^\+:]*:\/\/[^\+\n "]+)\+?' yq -ie 'with(.secretGenerator[];
+  WORKDIR="$WORKDIR/" REF_REGEX="$VALS_REF_REGEX" yq -ie 'with(.secretGenerator[];
       .literals += [(.files[]|select(test(strenv(REF_REGEX))))] |
       del(.files[] | select(test(strenv(REF_REGEX)))) |
       .literals[] |= (
@@ -75,9 +93,11 @@ get_kust_files() {
     fi
   done
 }
+
 build_wrapper() {
   get_kust_files
   if [ "${#KUST_FILES[@]}" -eq 1 ]; then
+    check_vals_ref_uri
     backup_kust_file
     update_kust_file
     exec_kust_vals "$@"
