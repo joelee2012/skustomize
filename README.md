@@ -12,7 +12,7 @@ skustomize is a wrapper for [kustomize](https://github.com/kubernetes-sigs/kusto
 
 ## Installation
 
-### prerequisite
+### Prerequisites
 
 * [kustomize](https://github.com/kubernetes-sigs/kustomize)
 * [yq](https://github.com/mikefarah/yq) a lightweight and portable command-line YAML processor.
@@ -31,22 +31,44 @@ skustomize is a wrapper for [kustomize](https://github.com/kubernetes-sigs/kusto
     * [Plain File](https://github.com/helmfile/vals#file)
 
 
-### install skustomize
-    git clone https://github.com/joelee2012/skustomize/skustomize
+### Install skustomize
+
+```sh
+curl -Lvo /usr/local/bin/skustomize https://raw.githubusercontent.com/joelee2012/skustomize/main/skustomize
+chmod +x /usr/local/bin/skustomize
+# optinal
+echo 'alias kustomize=skustomize' >> ~/.bashrc
+source ~/.bashrc
+```
 
 
 ## Usage
 
-create [kustomization.yaml](./tests/kustomization.yaml)
+Check [tests](./tests) as example
 
-    apiVersion: kustomize.config.k8s.io/v1beta1
-    kind: Kustomization
-    secretGenerator:
-    - name: test-secret
-        files:
-        - key=age/key.txt
-        - privateKey=ref+sops://secrets.yaml#/privateKey
-        literals:
-        - publicKey=ref+sops://secrets.yaml#/publicKey
+- Create [kustomization.yaml](./tests/kustomization.yaml)
+```yaml
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+secretGenerator:
+- name: test-secret
+    files:
+    - key=age/key.txt
+    - privateKey=ref+sops://secrets.yaml#/privateKey
+    literals:
+    - publicKey=ref+sops://secrets.yaml#/publicKey
+configMapGenerator:
+- name: my-java-server-env-vars
+    literals:
+    - JAVA_HOME=/opt/java/jdk
+    - JAVA_TOOL_OPTIONS=-agentlib:hprof
+```
 
-create encrypted [secrets.yaml](./tests/secrets.yaml) files with sops 
+- Create encrypted [secrets.yaml](./tests/secrets.yaml) files with sops
+
+- Run `skustomize build tests`
+
+```sh
+export SOPS_AGE_KEY_FILE=$PWD/tests/age/key.txt
+skustomize build tests
+```
