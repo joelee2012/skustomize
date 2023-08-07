@@ -3,8 +3,7 @@ kind: Kustomization
 secretGenerator:
   - name: test-secret
     files:
-      - key=/home/joelee/github/skustomize/tests/age/key.txt
+      - key=age/key.txt
     literals:
-      - xxx=ref+sops://secrets.yaml#/privateKey
-      - yyy=ref+sops:///home/joelee/github/skustomize/tests/secrets.yaml#/publicKey
-      # - zzz=ref+s3://mybucket/myjsonobj#/foo/bar
+      - privateKey=ref+sops://secrets.yaml#/privateKey
+      - keyInBucket=ref+s3://mybucket/myjsonobj#/foo/bar
