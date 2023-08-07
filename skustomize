@@ -51,19 +51,12 @@ backup_kust_file() {
 }
 
 update_kust_file() {
-  WORKDIR="ref+sops://$WORKDIR/" yq -ie 'with(.secretGenerator[];
-    .literals += [(.files[]|select(. == "*ref+sops://*"))] |
-    del(.files[] | select(. == "*ref+sops://*")) |
-    .literals[] |= (
-      capture("((?P<filename>[^=]*)=)*(?P<refurl>(?P<schema>ref\+sops://)(?P<filepath>(/*[^#/]*/)*(?P<basename>[^#/]+))(#/*(?P<key>.*))*)") |
-        select(.filepath != "/*") |
-        ((.filename // .key) // .basename)  + "=" + .refurl | sub("ref\+sops://", strenv(WORKDIR))
-      ) |
-
-    .literals[] |= (
-      capture("((?P<filename>[^=]*)=)*(?P<refurl>(?P<schema>ref\+sops://)(?P<filepath>(/*[^#/]*/)*(?P<basename>[^#/]+))(#/*(?P<key>.*))*)") |
-        select(.filepath == "/*") |
-        ((.filename // .key) // .basename)  + "=" + .refurl
+  #shellcheck disable=SC2016
+  WORKDIR="$WORKDIR/" REF_REGEX='((secret)?ref)\+([^\+:]*:\/\/[^\+\n "]+)\+?' yq -ie 'with(.secretGenerator[];
+      .literals += [(.files[]|select(test(strenv(REF_REGEX))))] |
+      del(.files[] | select(test(strenv(REF_REGEX)))) |
+      .literals[] |= (
+        select(test(".*ref\+(sops|tfstate|file)://[^/]+")) | sub("(ref\+(sops|tfstate|file)://)", "${1}" + strenv(WORKDIR))
       )
     )' "${KUST_FILES[0]}"
 }

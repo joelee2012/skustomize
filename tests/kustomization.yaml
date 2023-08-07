@@ -7,3 +7,4 @@ secretGenerator:
     literals:
       - xxx=ref+sops://secrets.yaml#/privateKey
       - yyy=ref+sops:///home/joelee/github/skustomize/tests/secrets.yaml#/publicKey
+      # - zzz=ref+s3://mybucket/myjsonobj#/foo/bar

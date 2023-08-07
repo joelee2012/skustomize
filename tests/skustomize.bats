@@ -54,14 +54,14 @@ setup() {
   assert_equal "$WORKDIR" "abc/def"
 }
 
-@test "it should generate secrets from encrypted file in given folder" {
+@test "it should generate secrets from validated vals uri" {
   cat >$TEMPDIR/kustomization.yaml <<EOF
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 secretGenerator:
   - name: test-secret
     files:
-      - ref+sops://secrets.yaml#/privateKey
+      - privateKey=ref+sops://secrets.yaml#/privateKey
       - publicKey=ref+sops://$TEMPDIR/secrets.yaml#/publicKey
 EOF
   run --separate-stderr "$SKUST_BIN" build $TEMPDIR
@@ -72,18 +72,46 @@ EOF
   assert_success
 }
 
-@test "it should exit with error if key in ref url" {
+@test "it should exit with error if file/literal has no defined name" {
   cat >$TEMPDIR/kustomization.yaml <<EOF
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 secretGenerator:
   - name: test-secret
-    literals:
+    files:
       - ref+sops://secrets.yaml
 EOF
   run "$SKUST_BIN" build $TEMPDIR
   assert_failure
-  assert_output --partial "Error unmarshalling input json: invalid character 'p' looking for beginning of value"
+  assert_output --partial "invalid literal source ref+sops://$TEMPDIR/secrets.yaml, expected key=value"
+}
+
+@test "it should exit with error if given unsupported scheme" {
+  cat >$TEMPDIR/kustomization.yaml <<EOF
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+secretGenerator:
+  - name: test-secret
+    files:
+      - key=ref+xxxx://secrets.yaml
+EOF
+  run "$SKUST_BIN" build $TEMPDIR
+  assert_failure
+  assert_output --partial "no provider registered for scheme"
+}
+
+@test "it should exit with error if no fragement set" {
+  cat >$TEMPDIR/kustomization.yaml <<EOF
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+secretGenerator:
+  - name: test-secret
+    files:
+      - key=ref+sops://secrets.yaml
+EOF
+  run "$SKUST_BIN" build $TEMPDIR
+  assert_failure
+  assert_output --partial "Error unmarshalling input json: invalid character"
 }
 
 @test "it should exit with error if two folders given" {
