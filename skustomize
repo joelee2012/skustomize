@@ -1,0 +1,115 @@
+#!/usr/bin/env bash
+
+set -eu
+set -o pipefail
+
+: "${KUSTOMIZE_BIN:=kustomize}"
+
+WORKDIR=.
+SUB_COMMAND=""
+BOOL_FLAG=true
+declare -a GLOBAL_FLAGS=() SUB_FLAGS=() KUST_FILES=() KUST_DIRS=()
+
+CMDS="(build|cfg|completion|create|edit|fn|help|localize|version|docs-fn|docs-fn-spec|docs-io-annotations|docs-merge|docs-merge3|tutorials-command-basics|tutorials-function-basics)"
+
+parse_flags() {
+  for flag in "$@"; do
+    if [[ $flag =~ ^$CMDS$ ]]; then
+      SUB_COMMAND="$flag"
+    elif [ -z "$SUB_COMMAND" ] || [ "$flag" == "--stack-trace" ]; then
+      GLOBAL_FLAGS+=("$flag")
+    else
+      SUB_FLAGS+=("$flag")
+      if [ "$SUB_COMMAND" == build ]; then
+        case "$flag" in
+        -e | --env | --load-restrictor | --mount | --network-name | -o | --output | --helm-command)
+          BOOL_FLAG=false
+          ;;
+        -*)
+          BOOL_FLAG=true
+          ;;
+        *)
+          if [ "$BOOL_FLAG" == true ]; then
+            KUST_DIRS+=("$flag")
+          fi
+          BOOL_FLAG=true
+          ;;
+        esac
+      fi
+    fi
+  done
+  WORKDIR="${KUST_DIRS[0]:-.}"
+}
+
+revert_kust_file() {
+  mv "${KUST_FILES[0]}.backup" "${KUST_FILES[0]}"
+}
+
+backup_kust_file() {
+  cp "${KUST_FILES[0]}" "${KUST_FILES[0]}".backup
+  trap 'revert_kust_file' EXIT
+}
+
+VALS_REF_REGEX='((secret)?ref)\+([^\+:]*:\/\/[^\+\n "]+)\+?'
+
+check_vals_ref_uri_by_type() {
+  local count=0
+  while read -r line; do
+    if [[ "$line" =~ ^=?$VALS_REF_REGEX ]]; then
+      echo "[ERROR]: invalid $1 source: [$line], expected key=value"
+      ((count += 1))
+    fi
+  done < <(TYPE="$1" yq '.secretGenerator[][strenv(TYPE)][]' "${KUST_FILES[0]}")
+  [ $count -eq 0 ]
+}
+
+check_vals_ref_uri() {
+  check_vals_ref_uri_by_type "files"
+  check_vals_ref_uri_by_type "literals"
+}
+
+update_kust_file() {
+  #shellcheck disable=SC2016
+  WORKDIR="$WORKDIR/" REF_REGEX="$VALS_REF_REGEX" yq -ie 'with(.secretGenerator[];
+      .literals += [(.files[]|select(test(strenv(REF_REGEX))))] |
+      del(.files[] | select(test(strenv(REF_REGEX)))) |
+      .literals[] |= (
+        select(test(".*ref\+(sops|tfstate|file)://[^/]+")) | sub("(ref\+(sops|tfstate|file)://)", "${1}" + strenv(WORKDIR))
+      )
+    )' "${KUST_FILES[0]}"
+}
+
+exec_kust_vals() {
+  command ${KUSTOMIZE_BIN} "$@" |
+    yq 'select(.kind == "Secret").data[]|=(.|sub("\n", "")|@base64d)' |
+    vals eval -f - |
+    yq 'select(.kind == "Secret").data[]|=@base64'
+}
+
+get_kust_files() {
+  for fn in kustomization.yaml kustomization.yml Kustomization; do
+    if [ -e "$WORKDIR/$fn" ]; then
+      KUST_FILES=("$WORKDIR/$fn" "${KUST_FILES[@]}")
+    fi
+  done
+}
+
+build_wrapper() {
+  get_kust_files
+  if [ "${#KUST_FILES[@]}" -eq 1 ]; then
+    check_vals_ref_uri
+    backup_kust_file
+    update_kust_file
+    exec_kust_vals "$@"
+    exit 0
+  fi
+}
+
+# shellcheck disable=SC2091
+if ! $(return 0 2>/dev/null); then
+  parse_flags "$@"
+  if [ "${#KUST_DIRS[@]}" -lt 2 ] && [ "$SUB_COMMAND" == build ]; then
+    build_wrapper "$@"
+  fi
+  ${KUSTOMIZE_BIN} "$@"
+fi

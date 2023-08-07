@@ -1,0 +1,56 @@
+---
+name: CI
+
+on:
+  pull_request:
+  push:
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Run ShellCheck
+        uses: ludeeus/action-shellcheck@master
+
+  unit-tests:
+    runs-on: ubuntu-latest
+    env:
+      SOPS_VERSION: 3.7.3
+      VALS_VERSION: 0.25.0
+      YQ_VERSION: 4.34.2
+      BATSLIB_TEMP_PRESERVE: "0"
+      BATSLIB_TEMP_PRESERVE_ON_FAILURE: "0"
+
+    steps:
+      - name: Setup Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: 2.7
+
+      - name: Install dependencies
+        run: |
+          mkdir -p "$HOME/.local"
+          npm install --prefix "$HOME/.local" bats bats-support bats-assert
+          gem install bashcov:'< 2' simplecov-cobertura:'< 2'
+          curl -fsSL https://github.com/mozilla/sops/releases/download/v${{ env.SOPS_VERSION }}/sops-v${SOPS_VERSION}.linux -o /usr/local/bin/sops
+          chmod +x /usr/local/bin/sops
+          curl -fsSL https://github.com/helmfile/vals/releases/download/v${{ env.VALS_VERSION }}/vals_${VALS_VERSION}_linux_amd64.tar.gz | tar xzf - -C /usr/local/bin/ vals
+          chmod +x /usr/local/bin/vals
+          curl -fsSL https://github.com/mikefarah/yq/releases/download/v${{ env.YQ_VERSION }}/yq_linux_amd64 -o /usr/local/bin/yq
+          chmod +x /usr/local/bin/yq
+          echo "$HOME/.local/node_modules/bats/bin" >> "$GITHUB_PATH"
+          echo "BATS_LIB_PATH=$HOME/.local/node_modules" >> "$GITHUB_ENV"
+          echo "SOPS_AGE_KEY_FILE=$PWD/tests/age/key.txt" >> "$GITHUB_ENV"
+
+      - uses: actions/checkout@v3
+
+      - name: run test
+        run: bashcov -- bats -r --timing --tap --report-formatter junit tests
+
+      - uses: codecov/codecov-action@v3
+        with:
+          directory: coverage
+          files: coverage.xml
+          verbose: true
