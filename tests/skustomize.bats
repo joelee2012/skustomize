@@ -30,15 +30,15 @@ setup() {
   assert_equal "$WORKDIR" "."
 }
 
-@test 'it should parse flags for sub command' {
-  parse_flags build --as-current-user --enable-exec --stack-trace
-  assert_equal "${GLOBAL_FLAGS[*]}" "--stack-trace"
+@test 'it should parse sub flags only' {
+  parse_flags build --as-current-user --enable-exec
+  assert_equal "${GLOBAL_FLAGS[*]}" ""
   assert_equal "$SUB_COMMAND" "build"
   assert_equal "${SUB_FLAGS[*]}" "--as-current-user --enable-exec"
   assert_equal "$WORKDIR" "."
 }
 
-@test 'it should parse global and sub flags for sub command' {
+@test 'it should parse global and sub flags both' {
   parse_flags --stack-trace build --as-current-user --enable-exec -e xx=yy abc/def
   assert_equal "${GLOBAL_FLAGS[*]}" "--stack-trace"
   assert_equal "$SUB_COMMAND" "build"
@@ -46,15 +46,15 @@ setup() {
   assert_equal "$WORKDIR" "abc/def"
 }
 
-@test 'it should parse global and sub flags for sub command1' {
-  parse_flags --stack-trace build --as-current-user abc/def --enable-exec -e xx=yy
+@test 'it should parse global and sub flags both with any order' {
+  parse_flags build --as-current-user abc/def --enable-exec -e xx=yy --stack-trace
   assert_equal "${GLOBAL_FLAGS[*]}" "--stack-trace"
   assert_equal "$SUB_COMMAND" "build"
   assert_equal "${SUB_FLAGS[*]}" "--as-current-user abc/def --enable-exec -e xx=yy"
   assert_equal "$WORKDIR" "abc/def"
 }
 
-@test "it should generate secrets from validated vals uri" {
+@test "it should generate secrets from valid uri" {
   cat >$TEMPDIR/kustomization.yaml <<EOF
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
@@ -72,7 +72,7 @@ EOF
   assert_success
 }
 
-@test "it should exit with error if file/literal has no defined name" {
+@test "it should fail if file/literal has no defined name" {
   cat >$TEMPDIR/kustomization.yaml <<EOF
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
@@ -86,7 +86,7 @@ EOF
   assert_output --partial "[ERROR]: invalid files source: [ref+sops://secrets.yaml], expected key=value"
 }
 
-@test "it should exit with error if given unsupported scheme" {
+@test "it should fail if uri is invalid" {
   cat >$TEMPDIR/kustomization.yaml <<EOF
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
@@ -100,7 +100,7 @@ EOF
   assert_output --partial "no provider registered for scheme"
 }
 
-@test "it should exit with error if no fragement set" {
+@test "it should fail if uri has no fragement" {
   cat >$TEMPDIR/kustomization.yaml <<EOF
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
@@ -114,8 +114,15 @@ EOF
   assert_output --partial "Error unmarshalling input json: invalid character"
 }
 
-@test "it should exit with error if two folders given" {
+@test "it should fail if gives two folders" {
   run "$SKUST_BIN" build folder1 folder2
   assert_failure
   assert_output "Error: specify one path to kustomization.yaml"
+}
+
+@test "it should fail if gives two kustomization files" {
+  touch $TEMPDIR/kustomization.yaml $TEMPDIR/kustomization.yml
+  run "$SKUST_BIN" build $TEMPDIR
+  assert_failure
+  assert_output --partial "Error: Found multiple kustomization files under"
 }

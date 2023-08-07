@@ -29,11 +29,13 @@ jobs:
         with:
           ruby-version: 2.7
 
+      - name: Install Ruby dependencies
+        run: bundle update --bundler && bundle install
+
       - name: Install dependencies
         run: |
           mkdir -p "$HOME/.local"
           npm install --prefix "$HOME/.local" bats bats-support bats-assert
-          gem install bashcov:'< 2' simplecov-cobertura:'< 2'
           curl -fsSL https://github.com/mozilla/sops/releases/download/v${{ env.SOPS_VERSION }}/sops-v${SOPS_VERSION}.linux -o /usr/local/bin/sops
           chmod +x /usr/local/bin/sops
           curl -fsSL https://github.com/helmfile/vals/releases/download/v${{ env.VALS_VERSION }}/vals_${VALS_VERSION}_linux_amd64.tar.gz | tar xzf - -C /usr/local/bin/ vals

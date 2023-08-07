@@ -1,4 +1,5 @@
 [![CI](https://github.com/joelee2012/skustomize/actions/workflows/ci.yaml/badge.svg?branch=main)](https://github.com/joelee2012/skustomize/actions/workflows/ci.yaml)
+[![codecov](https://codecov.io/gh/joelee2012/skustomize/branch/main/graph/badge.svg?token=HEKUTJ7AH2)](https://codecov.io/gh/joelee2012/skustomize)
 # skustomize
 
 ## About

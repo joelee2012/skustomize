@@ -89,7 +89,7 @@ exec_kust_vals() {
 get_kust_files() {
   for fn in kustomization.yaml kustomization.yml Kustomization; do
     if [ -e "$WORKDIR/$fn" ]; then
-      KUST_FILES=("$WORKDIR/$fn" "${KUST_FILES[@]}")
+      KUST_FILES+=("$WORKDIR/$fn")
     fi
   done
 }
