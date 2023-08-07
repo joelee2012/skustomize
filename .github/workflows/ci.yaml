@@ -11,17 +11,8 @@ jobs:
     steps:
       - uses: actions/checkout@v3
 
-      - name: run shellcheck
-        uses: reviewdog/action-shellcheck@v1
-        with:
-          github_token: ${{ secrets.SHELL_CHECK_GITHUB_TOKEN }}
-          reporter: github-pr-review
-          path: "."
-          pattern: |
-            *.sh
-            *.bats
-          exclude: "./.git/*" # Optional.
-          check_all_files_with_shebangs: "false" # Optional.
+      - name: Run ShellCheck
+        uses: ludeeus/action-shellcheck@master
 
   unit-tests:
     runs-on: ubuntu-latest
