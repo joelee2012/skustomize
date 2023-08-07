@@ -14,7 +14,7 @@ jobs:
       - name: run shellcheck
         uses: reviewdog/action-shellcheck@v1
         with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
+          github_token: ${{ secrets.SHELL_CHECK_GITHUB_TOKEN }}
           reporter: github-pr-review
           path: "."
           pattern: |
