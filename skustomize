@@ -8,12 +8,16 @@ set -o pipefail
 WORKDIR=.
 SUB_COMMAND=""
 BOOL_FLAG=true
+SHOW_HELP=false
 declare -a GLOBAL_FLAGS=() SUB_FLAGS=() KUST_FILES=() KUST_DIRS=()
 
 CMDS="(build|cfg|completion|create|edit|fn|help|localize|version|docs-fn|docs-fn-spec|docs-io-annotations|docs-merge|docs-merge3|tutorials-command-basics|tutorials-function-basics)"
 
 parse_flags() {
   for flag in "$@"; do
+    if [ "$flag" == "-h" ] || [ "$flag" == "--help" ]; then
+      SHOW_HELP=true
+    fi
     if [[ $flag =~ ^$CMDS$ ]]; then
       SUB_COMMAND="$flag"
     elif [ -z "$SUB_COMMAND" ] || [ "$flag" == "--stack-trace" ]; then
@@ -56,7 +60,7 @@ check_vals_ref_uri_by_type() {
   local count=0
   while read -r line; do
     if [[ "$line" =~ ^=?$VALS_REF_REGEX ]]; then
-      echo "[ERROR]: invalid $1 source: [$line], expected key=value"
+      echo -e "\033[1;31m[ERROR]: invalid $1 source: [$line], expected key=value \033[0m"
       ((count += 1))
     fi
   done < <(TYPE="$1" yq '.secretGenerator[][strenv(TYPE)][]' "${KUST_FILES[0]}")
@@ -108,7 +112,7 @@ build_wrapper() {
 # shellcheck disable=SC2091
 if ! $(return 0 2>/dev/null); then
   parse_flags "$@"
-  if [ "${#KUST_DIRS[@]}" -lt 2 ] && [ "$SUB_COMMAND" == build ]; then
+  if [ "${#KUST_DIRS[@]}" -lt 2 ] && [ "$SUB_COMMAND" == build ] && [ "$SHOW_HELP" == false ]; then
     build_wrapper "$@"
   fi
   ${KUSTOMIZE_BIN} "$@"

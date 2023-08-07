@@ -4,6 +4,6 @@ secretGenerator:
   - name: test-secret
     files:
       - key=age/key.txt
+      - keyInBucket=ref+s3://mybucket/myjsonobj#/foo/bar
     literals:
       - privateKey=ref+sops://secrets.yaml#/privateKey
-      - keyInBucket=ref+s3://mybucket/myjsonobj#/foo/bar

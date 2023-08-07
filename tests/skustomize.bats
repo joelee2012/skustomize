@@ -126,3 +126,13 @@ EOF
   assert_failure
   assert_output --partial "Error: Found multiple kustomization files under"
 }
+
+@test "it should show global help if gives global -h" {
+  run "$SKUST_BIN" -h build
+  assert_output --partial "Manages declarative configuration of Kubernetes."
+}
+
+@test "it should show build help if gives -h to build" {
+  run "$SKUST_BIN" build -h
+  assert_output --partial "Build a set of KRM resources using a 'kustomization.yaml' file"
+}
