@@ -51,13 +51,20 @@ backup_kust_file() {
 }
 
 update_kust_file() {
-  ref="ref+sops://${KUST_FILES[0]%/*}/" yq -ie 'with(.secretGenerator[];
+  WORKDIR="ref+sops://$WORKDIR/" yq -ie 'with(.secretGenerator[];
     .literals += [(.files[]|select(. == "*ref+sops://*"))] |
     del(.files[] | select(. == "*ref+sops://*")) |
     .literals[] |= (
-      capture("((?P<filename>[^=]*)=)*(?P<refurl>ref\+sops://(?P<filepath>(/*[^#/]*/)*(?P<basename>[^#/]+))(#/*(?P<key>.*))*)") |
-      select(.filepath != "/*") |
-      ((.key // .basename)  + "=" + ((.refurl | sub("ref\+sops://", strenv(ref))))))
+      capture("((?P<filename>[^=]*)=)*(?P<refurl>(?P<schema>ref\+sops://)(?P<filepath>(/*[^#/]*/)*(?P<basename>[^#/]+))(#/*(?P<key>.*))*)") |
+        select(.filepath != "/*") |
+        ((.filename // .key) // .basename)  + "=" + .refurl | sub("ref\+sops://", strenv(WORKDIR))
+      ) |
+
+    .literals[] |= (
+      capture("((?P<filename>[^=]*)=)*(?P<refurl>(?P<schema>ref\+sops://)(?P<filepath>(/*[^#/]*/)*(?P<basename>[^#/]+))(#/*(?P<key>.*))*)") |
+        select(.filepath == "/*") |
+        ((.filename // .key) // .basename)  + "=" + .refurl
+      )
     )' "${KUST_FILES[0]}"
 }
 

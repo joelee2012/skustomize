@@ -5,5 +5,5 @@ secretGenerator:
     files:
       - key=/home/joelee/github/skustomize/tests/age/key.txt
     literals:
-      - ref+sops://secrets.yaml
-      - publicKey=ref+sops:///home/joelee/github/skustomize/tests/secrets.yaml#/publicKey
+      - xxx=ref+sops://secrets.yaml#/privateKey
+      - yyy=ref+sops:///home/joelee/github/skustomize/tests/secrets.yaml#/publicKey
