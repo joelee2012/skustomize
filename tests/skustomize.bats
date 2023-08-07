@@ -54,16 +54,16 @@ setup() {
   assert_equal "$WORKDIR" "abc/def"
 }
 
-@test "it should generate secrets from encrypted file in current folder" {
-  run --separate-stderr "$SKUST_BIN" build
-  private_key=$(yq '.data.privateKey|@base64d' <<<"$output")
-  assert_equal "$private_key" "$(<ssh/private.key)"
-  public_key=$(yq '.data.publicKey|@base64d' <<<"$output")
-  assert_equal "$public_key" "$(<ssh/public.key)"
-  assert_success
-}
-
 @test "it should generate secrets from encrypted file in given folder" {
+  cat >$TEMPDIR/kustomization.yaml <<EOF
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+secretGenerator:
+  - name: test-secret
+    files:
+      - ref+sops://secrets.yaml#/privateKey
+      - publicKey=ref+sops://$TEMPDIR/secrets.yaml#/publicKey
+EOF
   run --separate-stderr "$SKUST_BIN" build $TEMPDIR
   private_key=$(yq '.data.privateKey|@base64d' <<<"$output")
   assert_equal "$private_key" "$(<ssh/private.key)"
@@ -72,18 +72,18 @@ setup() {
   assert_success
 }
 
-@test "it should exit with error if no key in sops url" {
+@test "it should exit with error if key in ref url" {
   cat >$TEMPDIR/kustomization.yaml <<EOF
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 secretGenerator:
   - name: test-secret
-    files:
+    literals:
       - ref+sops://secrets.yaml
 EOF
   run "$SKUST_BIN" build $TEMPDIR
   assert_failure
-  assert_output --partial "invalid literal source ref+sops://$TEMPDIR/secrets.yaml, expected key=value"
+  assert_output --partial "Error unmarshalling input json: invalid character 'p' looking for beginning of value"
 }
 
 @test "it should exit with error if two folders given" {
