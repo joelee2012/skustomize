@@ -6,17 +6,13 @@
 
 skustomize is a wrapper for [kustomize](https://github.com/kubernetes-sigs/kustomize) that generate secrets with [secretGenerator](https://kubectl.docs.kubernetes.io/references/kustomize/kustomization/secretgenerator/) from different providers on the fly.
 
-* Use [vals](https://github.com/helmfile/vals) to load values and secrets from providers
-* Use skustomize in ArgoCD
-
-
 ## Installation
 
 ### Prerequisites
 
-* [kustomize](https://github.com/kubernetes-sigs/kustomize)
-* [yq](https://github.com/mikefarah/yq) a lightweight and portable command-line YAML processor.
+* [kustomize](https://github.com/kubernetes-sigs/kustomize) is a tool to customize Kubernetes objects
 * [vals](https://github.com/helmfile/vals) is a tool for managing configuration values and secrets form various sources.
+* [yq](https://github.com/mikefarah/yq) is a lightweight and portable command-line YAML processor.
 
     It supports various backends:
 
@@ -47,28 +43,29 @@ source ~/.bashrc
 Check [tests](./tests) as example
 
 - Create [kustomization.yaml](./tests/kustomization.yaml)
-```yaml
-apiVersion: kustomize.config.k8s.io/v1beta1
-kind: Kustomization
-secretGenerator:
-- name: test-secret
-    files:
-    - key=age/key.txt
-    - privateKey=ref+sops://secrets.yaml#/privateKey
-    literals:
-    - publicKey=ref+sops://secrets.yaml#/publicKey
-configMapGenerator:
-- name: my-java-server-env-vars
-    literals:
-    - JAVA_HOME=/opt/java/jdk
-    - JAVA_TOOL_OPTIONS=-agentlib:hprof
-```
 
-- Create encrypted [secrets.yaml](./tests/secrets.yaml) files with sops
+    ```yaml
+    apiVersion: kustomize.config.k8s.io/v1beta1
+    kind: Kustomization
+    secretGenerator:
+    - name: test-secret
+        files:
+        - key=age/key.txt
+        - privateKey=ref+sops://secrets.yaml#/privateKey
+        literals:
+        - publicKey=ref+sops://secrets.yaml#/publicKey
+    configMapGenerator:
+    - name: my-java-server-env-vars
+        literals:
+        - JAVA_HOME=/opt/java/jdk
+        - JAVA_TOOL_OPTIONS=-agentlib:hprof
+    ```
+
+- Create sops encrypted [secrets.yaml](./tests/secrets.yaml) files with content of [ssh](./tests/ssh/)
 
 - Run `skustomize build tests`
 
-```sh
-export SOPS_AGE_KEY_FILE=$PWD/tests/age/key.txt
-skustomize build tests
-```
+    ```sh
+    export SOPS_AGE_KEY_FILE=$PWD/tests/age/key.txt
+    skustomize build tests
+    ```
