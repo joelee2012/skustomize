@@ -83,7 +83,7 @@ update_kust_file() {
 }
 
 exec_kust_vals() {
-  command ${KUSTOMIZE_BIN} "$@" |
+  ${KUSTOMIZE_BIN} "$@" |
     yq 'select(.kind == "Secret").data[]|=(.|sub("\n", "")|@base64d)' |
     vals eval -f - |
     yq 'select(.kind == "Secret").data[]|=@base64'
