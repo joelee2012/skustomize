@@ -4,6 +4,11 @@ secretGenerator:
   - name: test-secret
     files:
       - key=age/key.txt
-    literals:
       - privateKey=ref+sops://secrets.yaml#/privateKey
-      - keyInBucket=ref+s3://mybucket/myjsonobj#/foo/bar
+    literals:
+      - publicKey=ref+sops://secrets.yaml#/publicKey
+configMapGenerator:
+  - name: my-java-server-env-vars
+    literals:
+      - JAVA_HOME=/opt/java/jdk
+      - JAVA_TOOL_OPTIONS=-agentlib:hprof

@@ -1,21 +1,18 @@
 [![CI](https://github.com/joelee2012/skustomize/actions/workflows/ci.yaml/badge.svg?branch=main)](https://github.com/joelee2012/skustomize/actions/workflows/ci.yaml)
+[![codecov](https://codecov.io/gh/joelee2012/skustomize/branch/main/graph/badge.svg?token=HEKUTJ7AH2)](https://codecov.io/gh/joelee2012/skustomize)
 # skustomize
 
 ## About
 
 skustomize is a wrapper for [kustomize](https://github.com/kubernetes-sigs/kustomize) that generate secrets with [secretGenerator](https://kubectl.docs.kubernetes.io/references/kustomize/kustomization/secretgenerator/) from different providers on the fly.
 
-* Use [vals](https://github.com/helmfile/vals) to load values and secrets from providers
-* Use skustomize in ArgoCD
-
-
 ## Installation
 
-### prerequisite
+### Prerequisites
 
-* [kustomize](https://github.com/kubernetes-sigs/kustomize)
-* [yq](https://github.com/mikefarah/yq) a lightweight and portable command-line YAML processor.
+* [kustomize](https://github.com/kubernetes-sigs/kustomize) is a tool to customize Kubernetes objects
 * [vals](https://github.com/helmfile/vals) is a tool for managing configuration values and secrets form various sources.
+* [yq](https://github.com/mikefarah/yq) is a lightweight and portable command-line YAML processor.
 
     It supports various backends:
 
@@ -30,14 +27,24 @@ skustomize is a wrapper for [kustomize](https://github.com/kubernetes-sigs/kusto
     * [Plain File](https://github.com/helmfile/vals#file)
 
 
-### install skustomize
-    git clone https://github.com/joelee2012/skustomize/skustomize
+### Install skustomize
+
+```sh
+curl -Lvo /usr/local/bin/skustomize https://raw.githubusercontent.com/joelee2012/skustomize/main/skustomize
+chmod +x /usr/local/bin/skustomize
+# optinal
+echo 'alias kustomize=skustomize' >> ~/.bashrc
+source ~/.bashrc
+```
 
 
 ## Usage
 
-create [kustomization.yaml](./tests/kustomization.yaml)
+Check [tests](./tests) as example
 
+- Create [kustomization.yaml](./tests/kustomization.yaml)
+
+    ```yaml
     apiVersion: kustomize.config.k8s.io/v1beta1
     kind: Kustomization
     secretGenerator:
@@ -47,5 +54,18 @@ create [kustomization.yaml](./tests/kustomization.yaml)
         - privateKey=ref+sops://secrets.yaml#/privateKey
         literals:
         - publicKey=ref+sops://secrets.yaml#/publicKey
+    configMapGenerator:
+    - name: my-java-server-env-vars
+        literals:
+        - JAVA_HOME=/opt/java/jdk
+        - JAVA_TOOL_OPTIONS=-agentlib:hprof
+    ```
 
-create encrypted [secrets.yaml](./tests/secrets.yaml) files with sops 
+- Create sops encrypted [secrets.yaml](./tests/secrets.yaml) files with content of [ssh](./tests/ssh/)
+
+- Run `skustomize build tests`
+
+    ```sh
+    export SOPS_AGE_KEY_FILE=$PWD/tests/age/key.txt
+    skustomize build tests
+    ```
