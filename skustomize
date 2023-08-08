@@ -54,6 +54,8 @@ backup_kust_file() {
   trap 'revert_kust_file' EXIT
 }
 
+# the regexp for uri experission of vals
+# https://github.com/helmfile/vals/blob/main/pkg/expansion/expand_match.go#L15
 VALS_REF_REGEX='((secret)?ref)\+([^\+:]*:\/\/[^\+\n "]+)\+?'
 
 check_vals_ref_uri() {
