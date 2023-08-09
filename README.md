@@ -4,7 +4,7 @@
 
 ## About
 
-skustomize is a wrapper for [kustomize](https://github.com/kubernetes-sigs/kustomize) that generate secrets with [secretGenerator](https://kubectl.docs.kubernetes.io/references/kustomize/kustomization/secretgenerator/) from different providers on the fly.
+skustomize is a [kustomize](https://github.com/kubernetes-sigs/kustomize) wrapper that make [secretGenerator](https://kubectl.docs.kubernetes.io/references/kustomize/kustomization/secretgenerator/) generate secrets from encrypted resources on the fly. 
 
 ## Installation
 
@@ -32,7 +32,7 @@ skustomize is a wrapper for [kustomize](https://github.com/kubernetes-sigs/kusto
 ```sh
 curl -Lvo /usr/local/bin/skustomize https://raw.githubusercontent.com/joelee2012/skustomize/main/skustomize
 chmod +x /usr/local/bin/skustomize
-# optinal
+# optional
 echo 'alias kustomize=skustomize' >> ~/.bashrc
 source ~/.bashrc
 ```
@@ -69,3 +69,34 @@ Check [tests](./tests) as example
     export SOPS_AGE_KEY_FILE=$PWD/tests/age/key.txt
     skustomize build tests
     ```
+
+## ArgoCD support
+
+### Custom Docker Image
+
+```dockerfile
+ARG ARGOCD_VERSION="v2.8.0"
+FROM quay.io/argoproj/argocd:$ARGOCD_VERSION
+ARG SOPS_VERSION=3.7.3
+ARG VALS_VERSION=0.25.0
+ARG YQ_VERSION=4.34.2
+
+ENV KUSTOMIZE_BIN=/usr/local/bin/kustomize
+
+USER root
+
+RUN apt-get update && apt-get install -y \
+    curl \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/* \
+    && curl -fsSL https://github.com/mozilla/sops/releases/download/v${SOPS_VERSION}/sops-v${SOPS_VERSION}.linux \
+    -o /usr/local/bin/sops && chmod +x /usr/local/bin/sops \
+    && curl -fsSL https://github.com/helmfile/vals/releases/download/v${VALS_VERSION}/vals_${VALS_VERSION}_linux_amd64.tar.gz \
+    | tar xzf - -C /usr/local/bin/ vals && chmod +x /usr/local/bin/vals \
+    && curl -fsSLo /usr/local/sbin/kustomize https://raw.githubusercontent.com/joelee2012/skustomize/main/skustomize \
+    && chmod +x /usr/local/sbin/kustomize \
+    && curl -fsSL https://github.com/mikefarah/yq/releases/download/v${YQ_VERSION}/yq_linux_amd64 -o /usr/local/bin/yq \
+    && chmod +x /usr/local/bin/yq
+
+USER $ARGOCD_USER_ID
+```
