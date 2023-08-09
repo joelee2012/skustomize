@@ -32,7 +32,7 @@ skustomize is a wrapper for [kustomize](https://github.com/kubernetes-sigs/kusto
 ```sh
 curl -Lvo /usr/local/bin/skustomize https://raw.githubusercontent.com/joelee2012/skustomize/main/skustomize
 chmod +x /usr/local/bin/skustomize
-# optinal
+# optional
 echo 'alias kustomize=skustomize' >> ~/.bashrc
 source ~/.bashrc
 ```
