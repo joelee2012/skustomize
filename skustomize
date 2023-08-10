@@ -13,32 +13,33 @@ declare -a GLOBAL_FLAGS=() SUB_FLAGS=() KUST_FILES=() KUST_DIRS=()
 
 CMDS="(build|cfg|completion|create|edit|fn|help|localize|version|docs-fn|docs-fn-spec|docs-io-annotations|docs-merge|docs-merge3|tutorials-command-basics|tutorials-function-basics)"
 
+parse_build_flags() {
+  if [[ "$1" =~ ^(-e|--env|--load-restrictor|--mount|--network-name|-o|--output|--helm-command)$ ]]; then
+    BOOL_FLAG=false
+  # elif [[ "$1" =~ ^--(as-current-user|enable-alpha-plugins|enable-exec|enable-helm|enable-star|help|network)|-h$ ]]; then
+  #   BOOL_FLAG=true
+  elif [[ "$1" =~ ^-.* ]]; then
+    BOOL_FLAG=true
+  elif [ "$BOOL_FLAG" == true ]; then
+    KUST_DIRS+=("$flag")
+  else
+    BOOL_FLAG=true
+  fi
+}
+
 parse_flags() {
   for flag in "$@"; do
     if [ "$flag" == "-h" ] || [ "$flag" == "--help" ]; then
       SHOW_HELP=true
     fi
-    if [[ $flag =~ ^$CMDS$ ]]; then
+    if [ -z "$SUB_COMMAND" ] && [[ $flag =~ ^$CMDS$ ]]; then
       SUB_COMMAND="$flag"
-    elif [ -z "$SUB_COMMAND" ] || [ "$flag" == "--stack-trace" ]; then
+    elif [ -z "$SUB_COMMAND" ] || [[ "$flag" =~ ^(--stack-trace|-h|--help)$ ]]; then
       GLOBAL_FLAGS+=("$flag")
     else
       SUB_FLAGS+=("$flag")
       if [ "$SUB_COMMAND" == build ]; then
-        case "$flag" in
-        -e | --env | --load-restrictor | --mount | --network-name | -o | --output | --helm-command)
-          BOOL_FLAG=false
-          ;;
-        -*)
-          BOOL_FLAG=true
-          ;;
-        *)
-          if [ "$BOOL_FLAG" == true ]; then
-            KUST_DIRS+=("$flag")
-          fi
-          BOOL_FLAG=true
-          ;;
-        esac
+        parse_build_flags "$flag"
       fi
     fi
   done
