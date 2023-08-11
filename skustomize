@@ -4,28 +4,38 @@ set -eu
 set -o pipefail
 
 : "${KUSTOMIZE_BIN:=kustomize}"
+: "${KUBECTL_BIN:=kubectl}"
+USE_KUBECTL=false
+
+get_kust_bin() {
+  if ! which "${KUSTOMIZE_BIN}" &>/dev/null; then
+    if ! which "${KUBECTL_BIN}" &>/dev/null; then
+      echo -e "\033[1;31m[ERROR]: can't find ${KUSTOMIZE_BIN} or ${KUBECTL_BIN} installed\033[0m"
+      exit 1
+    fi
+    KUSTOMIZE_BIN="${KUBECTL_BIN}"
+    USE_KUBECTL=true
+  fi
+}
+
+check_deps() {
+  local missed=0
+  local -A deps=([yq]=https://github.com/mikefarah/yq [vals]=https://github.com/helmfile/vals)
+  for bin in yq vals; do
+    if ! which $bin &>/dev/null; then
+      echo -e "\033[1;31m[ERROR]: $bin is required, download from ${deps[$bin]}/releases\033[0m"
+      ((missed += 1))
+    fi
+  done
+  [ $missed -eq 0 ]
+}
 
 WORKDIR=.
 SUB_COMMAND=""
 BOOL_FLAG=true
 SHOW_HELP=false
 declare -a GLOBAL_FLAGS=() SUB_FLAGS=() KUST_FILES=() KUST_DIRS=()
-
 CMDS="(build|cfg|completion|create|edit|fn|help|localize|version|docs-fn|docs-fn-spec|docs-io-annotations|docs-merge|docs-merge3|tutorials-command-basics|tutorials-function-basics)"
-
-parse_build_flags() {
-  if [[ "$1" =~ ^(-e|--env|--load-restrictor|--mount|--network-name|-o|--output|--helm-command)$ ]]; then
-    BOOL_FLAG=false
-  # elif [[ "$1" =~ ^--(as-current-user|enable-alpha-plugins|enable-exec|enable-helm|enable-star|help|network)|-h$ ]]; then
-  #   BOOL_FLAG=true
-  elif [[ "$1" =~ ^-.* ]]; then
-    BOOL_FLAG=true
-  elif [ "$BOOL_FLAG" == true ]; then
-    KUST_DIRS+=("$flag")
-  else
-    BOOL_FLAG=true
-  fi
-}
 
 parse_flags() {
   for flag in "$@"; do
@@ -34,12 +44,25 @@ parse_flags() {
     fi
     if [ -z "$SUB_COMMAND" ] && [[ $flag =~ ^$CMDS$ ]]; then
       SUB_COMMAND="$flag"
-    elif [ -z "$SUB_COMMAND" ] || [[ "$flag" =~ ^(--stack-trace|-h|--help)$ ]]; then
+    elif [ -z "$SUB_COMMAND" ] || [ "$flag" == "--stack-trace" ]; then
       GLOBAL_FLAGS+=("$flag")
     else
       SUB_FLAGS+=("$flag")
       if [ "$SUB_COMMAND" == build ]; then
-        parse_build_flags "$flag"
+        case "$flag" in
+        -e | --env | --load-restrictor | --mount | --network-name | -o | --output | --helm-command)
+          BOOL_FLAG=false
+          ;;
+        -*)
+          BOOL_FLAG=true
+          ;;
+        *)
+          if [ "$BOOL_FLAG" == true ]; then
+            KUST_DIRS+=("$flag")
+          fi
+          BOOL_FLAG=true
+          ;;
+        esac
       fi
     fi
   done
@@ -111,8 +134,13 @@ build_wrapper() {
 
 # shellcheck disable=SC2091
 if ! $(return 0 2>/dev/null); then
+  get_kust_bin
+  check_deps
   parse_flags "$@"
   if [ "${#KUST_DIRS[@]}" -lt 2 ] && [ "$SUB_COMMAND" == build ] && [ "$SHOW_HELP" == false ]; then
+    if [ "$USE_KUBECTL" == true ]; then
+      set -- kustomize "${SUB_FLAGS[@]}"
+    fi
     build_wrapper "$@"
   fi
   ${KUSTOMIZE_BIN} "$@"
