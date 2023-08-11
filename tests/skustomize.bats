@@ -110,7 +110,7 @@ secretGenerator:
       - privateKey=ref+sops://secrets.yaml#/privateKey
       - publicKey=ref+sops://$TEMPDIR/secrets.yaml#/publicKey
 EOF
-  export KUSTOMIZE_BIN="fake-kustomize"
+  KUSTOMIZE_BIN="not-installed-kustomize"
   run --separate-stderr "$SKUST_BIN" build $TEMPDIR
   private_key=$(yq '.data.privateKey|@base64d' <<<"$output")
   assert_equal "$private_key" "$(<ssh/private.key)"
