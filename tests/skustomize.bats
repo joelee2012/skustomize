@@ -22,6 +22,26 @@ setup() {
   . "$SKUST_BIN"
 }
 
+@test "it should fail if kustomize and kubectl are not installed" {
+  KUSTOMIZE_BIN="wrong-kustomize" KUBECTL_BIN="wrong-kubectl"
+  run get_kust_bin
+  assert_failure
+  assert_output --partial "[ERROR]: can't find ${KUSTOMIZE_BIN} or ${KUBECTL_BIN} installed"
+}
+
+@test "it should use kubectl if kustomize is not installed" {
+  KUSTOMIZE_BIN="wrong-kustomize"
+  get_kust_bin
+  assert_equal $USE_KUBECTL true
+  assert_equal $KUSTOMIZE_BIN "kubectl"
+}
+
+@test "it should use kustomize if kustomize is installed" {
+  get_kust_bin
+  assert_equal $USE_KUBECTL false
+  assert_equal $KUSTOMIZE_BIN "kustomize"
+}
+
 @test "it should parse global flags only" {
   parse_flags -h --stack-trace
   assert_equal "${GLOBAL_FLAGS[*]}" "-h --stack-trace"
@@ -54,7 +74,7 @@ setup() {
   assert_equal "$WORKDIR" "abc/def"
 }
 
-@test "it should generate secrets from valid uri" {
+@test "it should generate secrets from valid uri with kustomize" {
   cat >$TEMPDIR/kustomization.yaml <<EOF
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
@@ -64,6 +84,25 @@ secretGenerator:
       - privateKey=ref+sops://secrets.yaml#/privateKey
       - publicKey=ref+sops://$TEMPDIR/secrets.yaml#/publicKey
 EOF
+  run --separate-stderr "$SKUST_BIN" build $TEMPDIR
+  private_key=$(yq '.data.privateKey|@base64d' <<<"$output")
+  assert_equal "$private_key" "$(<ssh/private.key)"
+  public_key=$(yq '.data.publicKey|@base64d' <<<"$output")
+  assert_equal "$public_key" "$(<ssh/public.key)"
+  assert_success
+}
+
+@test "it should generate secrets from valid uri with kubectl" {
+  cat >$TEMPDIR/kustomization.yaml <<EOF
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+secretGenerator:
+  - name: test-secret
+    files:
+      - privateKey=ref+sops://secrets.yaml#/privateKey
+      - publicKey=ref+sops://$TEMPDIR/secrets.yaml#/publicKey
+EOF
+  export KUSTOMIZE_BIN="fake-kustomize"
   run --separate-stderr "$SKUST_BIN" build $TEMPDIR
   private_key=$(yq '.data.privateKey|@base64d' <<<"$output")
   assert_equal "$private_key" "$(<ssh/private.key)"
