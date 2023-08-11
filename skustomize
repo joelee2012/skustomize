@@ -137,10 +137,10 @@ if ! $(return 0 2>/dev/null); then
   get_kust_bin
   check_deps
   parse_flags "$@"
+  if [ "$USE_KUBECTL" == true ]; then
+    set -- "${GLOBAL_FLAGS[@]}" kustomize "${SUB_FLAGS[@]}"
+  fi
   if [ "${#KUST_DIRS[@]}" -lt 2 ] && [ "$SUB_COMMAND" == build ] && [ "$SHOW_HELP" == false ]; then
-    if [ "$USE_KUBECTL" == true ]; then
-      set -- kustomize "${SUB_FLAGS[@]}"
-    fi
     build_wrapper "$@"
   fi
   ${KUSTOMIZE_BIN} "$@"

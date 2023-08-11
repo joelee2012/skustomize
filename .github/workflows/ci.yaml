@@ -20,6 +20,7 @@ jobs:
       SOPS_VERSION: 3.7.3
       VALS_VERSION: 0.25.0
       YQ_VERSION: 4.34.2
+      KUBECTL_VERSION: 1.27.4
       BATSLIB_TEMP_PRESERVE: "0"
       BATSLIB_TEMP_PRESERVE_ON_FAILURE: "0"
 
@@ -44,12 +45,23 @@ jobs:
           chmod +x /usr/local/bin/vals
           curl -fsSL https://github.com/mikefarah/yq/releases/download/v${{ env.YQ_VERSION }}/yq_linux_amd64 -o /usr/local/bin/yq
           chmod +x /usr/local/bin/yq
+          curl -fsSL https://dl.k8s.io/release/v${{ env.KUBECTL_VERSION }}/bin/linux/amd64/kubectl -o /usr/local/bin/kubectl
+          chmod +x /usr/local/bin/kubectl
           echo "$HOME/.local/node_modules/bats/bin" >> "$GITHUB_PATH"
           echo "BATS_LIB_PATH=$HOME/.local/node_modules" >> "$GITHUB_ENV"
           echo "SOPS_AGE_KEY_FILE=$PWD/tests/age/key.txt" >> "$GITHUB_ENV"
 
-      - name: run test
+      - name: Run test with kustomize is installed
         run: bashcov -- bats -r --timing --tap --report-formatter junit tests
+
+      - uses: codecov/codecov-action@v3
+        with:
+          directory: coverage
+          files: coverage.xml
+          verbose: true
+
+      - name: Run test with kustomize is not installed
+        run: KUSTOMIZE_BIN=not-installed bashcov -- bats -r --timing --tap --report-formatter junit tests
 
       - uses: codecov/codecov-action@v3
         with:

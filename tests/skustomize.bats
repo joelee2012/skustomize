@@ -23,23 +23,31 @@ setup() {
 }
 
 @test "it should fail if kustomize and kubectl are not installed" {
-  KUSTOMIZE_BIN="wrong-kustomize" KUBECTL_BIN="wrong-kubectl"
+  KUSTOMIZE_BIN="not-installed-kustomize" KUBECTL_BIN="not-installed-kubectl"
   run get_kust_bin
   assert_failure
   assert_output --partial "[ERROR]: can't find ${KUSTOMIZE_BIN} or ${KUBECTL_BIN} installed"
 }
 
 @test "it should use kubectl if kustomize is not installed" {
-  KUSTOMIZE_BIN="wrong-kustomize"
+  KUSTOMIZE_BIN="not-installed-kustomize"
   get_kust_bin
   assert_equal $USE_KUBECTL true
   assert_equal $KUSTOMIZE_BIN "kubectl"
 }
 
 @test "it should use kustomize if kustomize is installed" {
+  KUSTOMIZE_BIN="kustomize"
   get_kust_bin
   assert_equal $USE_KUBECTL false
   assert_equal $KUSTOMIZE_BIN "kustomize"
+}
+
+@test "it should fail if yq or vals is not installed" {
+  PATH="/usr/bin"
+  run check_deps
+  assert_failure
+  assert_output --partial "yq is required, download from"
 }
 
 @test "it should parse global flags only" {
@@ -156,19 +164,19 @@ EOF
 @test "it should fail if gives two folders" {
   run "$SKUST_BIN" build folder1 folder2
   assert_failure
-  assert_output "Error: specify one path to kustomization.yaml"
+  assert_output --partial "specify one path to kustomization.yaml"
 }
 
 @test "it should fail if gives two kustomization files" {
   touch $TEMPDIR/kustomization.yaml $TEMPDIR/kustomization.yml
   run "$SKUST_BIN" build $TEMPDIR
   assert_failure
-  assert_output --partial "Error: Found multiple kustomization files under"
+  assert_output --partial "Found multiple kustomization files under"
 }
 
 @test "it should show global help if gives global -h" {
   run "$SKUST_BIN" -h build
-  assert_output --partial "Manages declarative configuration of Kubernetes."
+  assert_output --partial "Build a kustomization target from a directory or URL"
 }
 
 @test "it should show build help if gives -h to build" {

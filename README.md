@@ -10,7 +10,7 @@ skustomize is a [kustomize](https://github.com/kubernetes-sigs/kustomize) wrappe
 
 ### Prerequisites
 
-* [kustomize](https://github.com/kubernetes-sigs/kustomize) is a tool to customize Kubernetes objects
+* [kubectl](https://dl.k8s.io/release/v1.27.4/bin/linux/amd64/kubectl) the Kubernetes command-line tool or [kustomize](https://github.com/kubernetes-sigs/kustomize) is a tool to customize Kubernetes objects
 * [vals](https://github.com/helmfile/vals) is a tool for managing configuration values and secrets form various sources.
 * [yq](https://github.com/mikefarah/yq) is a lightweight and portable command-line YAML processor.
 
@@ -29,14 +29,21 @@ skustomize is a [kustomize](https://github.com/kubernetes-sigs/kustomize) wrappe
 
 ### Install skustomize
 
+install as executable
 ```sh
-curl -Lvo /usr/local/bin/skustomize https://raw.githubusercontent.com/joelee2012/skustomize/main/skustomize
+curl -sfLo /usr/local/bin/skustomize https://raw.githubusercontent.com/joelee2012/skustomize/main/skustomize
 chmod +x /usr/local/bin/skustomize
 # optional
 echo 'alias kustomize=skustomize' >> ~/.bashrc
 source ~/.bashrc
 ```
+install as `kubectl` plugin
 
+```sh
+curl -sfLo /usr/local/bin/kubectl-skustomize https://raw.githubusercontent.com/joelee2012/skustomize/main/skustomize
+chmod +x /usr/local/bin/kubectl-skustomize
+kubectl skustomize -h
+```
 
 ## Usage
 
