@@ -37,17 +37,16 @@ setup() {
 }
 
 @test "it should use kustomize if kustomize is installed" {
-  KUSTOMIZE_BIN="kustomize"
   get_kust_bin
   assert_equal $USE_KUBECTL false
   assert_equal $KUSTOMIZE_BIN "kustomize"
 }
 
 @test "it should fail if yq or vals is not installed" {
-  PATH="/usr/bin"
+  which() { false; }
   run check_deps
   assert_failure
-  assert_output --partial "yq is required, download from"
+  assert_output --partial "vals is required, download from"
 }
 
 @test "it should parse global flags only" {
@@ -110,6 +109,7 @@ secretGenerator:
       - privateKey=ref+sops://secrets.yaml#/privateKey
       - publicKey=ref+sops://$TEMPDIR/secrets.yaml#/publicKey
 EOF
+
   KUSTOMIZE_BIN="not-installed-kustomize"
   run --separate-stderr "$SKUST_BIN" build $TEMPDIR
   private_key=$(yq '.data.privateKey|@base64d' <<<"$output")
