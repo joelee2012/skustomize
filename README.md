@@ -4,15 +4,17 @@
 
 ## About
 
-skustomize is a [kustomize](https://github.com/kubernetes-sigs/kustomize) wrapper that make [secretGenerator](https://kubectl.docs.kubernetes.io/references/kustomize/kustomization/secretgenerator/) generate secrets from encrypted resources on the fly. 
+skustomize is a [kustomize](https://github.com/kubernetes-sigs/kustomize) wrapper and [kubectl](https://dl.k8s.io/release/v1.27.4/bin/linux/amd64/kubectl) plugin that make [secretGenerator](https://kubectl.docs.kubernetes.io/references/kustomize/kustomization/secretgenerator/) generate secrets from encrypted resources on the fly. 
 
 ## Installation
 
 ### Prerequisites
 
-* [kustomize](https://github.com/kubernetes-sigs/kustomize) is a tool to customize Kubernetes objects
-* [vals](https://github.com/helmfile/vals) is a tool for managing configuration values and secrets form various sources.
+
+* [kustomize](https://github.com/kubernetes-sigs/kustomize) is a tool to customize Kubernetes objects if install as wrapper of `kustomize`
+* [kubectl](https://dl.k8s.io/release/v1.27.4/bin/linux/amd64/kubectl) is the Kubernetes command-line tool if install as `kubectl` plugin
 * [yq](https://github.com/mikefarah/yq) is a lightweight and portable command-line YAML processor.
+* [vals](https://github.com/helmfile/vals) is a tool for managing configuration values and secrets form various sources.
 
     It supports various backends:
 
@@ -29,8 +31,16 @@ skustomize is a [kustomize](https://github.com/kubernetes-sigs/kustomize) wrappe
 
 ### Install skustomize
 
+* Install as `kubectl` plugin, requires `kubectl` is installed
 ```sh
-curl -Lvo /usr/local/bin/skustomize https://raw.githubusercontent.com/joelee2012/skustomize/main/skustomize
+curl -sfLo /usr/local/bin/kubectl-skustomize https://raw.githubusercontent.com/joelee2012/skustomize/main/skustomize
+chmod +x /usr/local/bin/kubectl-skustomize
+kubectl skustomize -h
+```
+
+* Install as executable, requires `kustomize` is installed
+```sh
+curl -sfLo /usr/local/bin/skustomize https://raw.githubusercontent.com/joelee2012/skustomize/main/skustomize
 chmod +x /usr/local/bin/skustomize
 # optional
 echo 'alias kustomize=skustomize' >> ~/.bashrc
