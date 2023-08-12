@@ -175,7 +175,7 @@ secretGenerator:
       - publicKey=ref+sops://$TEMPDIR/secrets.yaml#/publicKey
 EOF
 
-  KUSTOMIZE_BIN="x"
+  export KUSTOMIZE_BIN="x"
   run --separate-stderr "$SKUST_BIN" $TEMPDIR
   assert_equal "$(yq '.data.privateKey|@base64d' <<<"$output")" "$PRIVATE_KEY"
   assert_equal "$(yq '.data.publicKey|@base64d' <<<"$output")" "$PUBLICK_KEY"
