@@ -8,29 +8,31 @@ setup_file() {
   export TEST_DIR="$GIT_ROOT/tests"
   export SKUST_BIN="$GIT_ROOT/skustomize"
   export SOPS_AGE_KEY_FILE="$TEST_DIR/age/key.txt"
-  TEMPDIR=$(mktemp -d)
-  export TEMPDIR
-  cp "$TEST_DIR"/secrets.yaml "$TEMPDIR"
-  cd "$TEST_DIR"
+  PRIVATE_KEY=$(<"$TEST_DIR/ssh/private.key")
+  PUBLICK_KEY=$(<"$TEST_DIR/ssh/public.key")
+  export PRIVATE_KEY PUBLICK_KEY
 }
 
-teardown_file() {
+teardown() {
   rm -rf "$TEMPDIR"
 }
 
 setup() {
+  TEMPDIR=$(mktemp -d)
+  export TEMPDIR
+  cp "$TEST_DIR"/secrets.yaml "$TEMPDIR"
   . "$SKUST_BIN"
 }
 
 @test "it should fail if kustomize and kubectl are not installed" {
-  KUSTOMIZE_BIN="not-installed-kustomize" KUBECTL_BIN="not-installed-kubectl"
+  KUSTOMIZE_BIN="x" KUBECTL_BIN="x"
   run get_kust_bin
   assert_failure
   assert_output --partial "[ERROR]: can't find ${KUSTOMIZE_BIN} or ${KUBECTL_BIN} installed"
 }
 
 @test "it should use kubectl if kustomize is not installed" {
-  KUSTOMIZE_BIN="not-installed-kustomize"
+  KUSTOMIZE_BIN="x"
   get_kust_bin
   assert_equal $USE_KUBECTL true
   assert_equal $KUSTOMIZE_BIN "kubectl"
@@ -92,30 +94,8 @@ secretGenerator:
       - publicKey=ref+sops://$TEMPDIR/secrets.yaml#/publicKey
 EOF
   run --separate-stderr "$SKUST_BIN" build $TEMPDIR
-  private_key=$(yq '.data.privateKey|@base64d' <<<"$output")
-  assert_equal "$private_key" "$(<ssh/private.key)"
-  public_key=$(yq '.data.publicKey|@base64d' <<<"$output")
-  assert_equal "$public_key" "$(<ssh/public.key)"
-  assert_success
-}
-
-@test "it should generate secrets from valid uri with kubectl" {
-  cat >$TEMPDIR/kustomization.yaml <<EOF
-apiVersion: kustomize.config.k8s.io/v1beta1
-kind: Kustomization
-secretGenerator:
-  - name: test-secret
-    files:
-      - privateKey=ref+sops://secrets.yaml#/privateKey
-      - publicKey=ref+sops://$TEMPDIR/secrets.yaml#/publicKey
-EOF
-
-  export KUSTOMIZE_BIN="not-installed-kustomize"
-  run --separate-stderr "$SKUST_BIN" build $TEMPDIR
-  private_key=$(yq '.data.privateKey|@base64d' <<<"$output")
-  assert_equal "$private_key" "$(<ssh/private.key)"
-  public_key=$(yq '.data.publicKey|@base64d' <<<"$output")
-  assert_equal "$public_key" "$(<ssh/public.key)"
+  assert_equal "$(yq '.data.privateKey|@base64d' <<<"$output")" "$PRIVATE_KEY"
+  assert_equal "$(yq '.data.publicKey|@base64d' <<<"$output")" "$PUBLICK_KEY"
   assert_success
 }
 
@@ -133,7 +113,7 @@ EOF
   assert_output --partial "[ERROR]: invalid files source: [ref+sops://secrets.yaml], expected key=value"
 }
 
-@test "it should fail if uri is invalid" {
+@test "it should fail if scheme is not registered" {
   cat >$TEMPDIR/kustomization.yaml <<EOF
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
@@ -182,4 +162,22 @@ EOF
 @test "it should show build help if gives -h to build" {
   run "$SKUST_BIN" build -h
   assert_output --partial "Build a set of KRM resources using a 'kustomization.yaml' file"
+}
+
+@test "it should generate secrets from valid uri with kubectl" {
+  cat >$TEMPDIR/kustomization.yaml <<EOF
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+secretGenerator:
+  - name: test-secret
+    files:
+      - privateKey=ref+sops://secrets.yaml#/privateKey
+      - publicKey=ref+sops://$TEMPDIR/secrets.yaml#/publicKey
+EOF
+
+  KUSTOMIZE_BIN="x"
+  run --separate-stderr "$SKUST_BIN" $TEMPDIR
+  assert_equal "$(yq '.data.privateKey|@base64d' <<<"$output")" "$PRIVATE_KEY"
+  assert_equal "$(yq '.data.publicKey|@base64d' <<<"$output")" "$PUBLICK_KEY"
+  assert_success
 }

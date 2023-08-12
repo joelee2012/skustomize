@@ -6,6 +6,12 @@ set -o pipefail
 : "${KUSTOMIZE_BIN:=kustomize}"
 : "${KUBECTL_BIN:=kubectl}"
 USE_KUBECTL=false
+WORKDIR=.
+SUB_COMMAND=""
+BOOL_FLAG=true
+SHOW_HELP=false
+declare -a GLOBAL_FLAGS=() SUB_FLAGS=() KUST_FILES=() KUST_DIRS=()
+CMDS="(build|cfg|completion|create|edit|fn|help|localize|version|docs-fn|docs-fn-spec|docs-io-annotations|docs-merge|docs-merge3|tutorials-command-basics|tutorials-function-basics)"
 
 get_kust_bin() {
   if ! which "${KUSTOMIZE_BIN}" &>/dev/null; then
@@ -13,8 +19,10 @@ get_kust_bin() {
       echo -e "\033[1;31m[ERROR]: can't find ${KUSTOMIZE_BIN} or ${KUBECTL_BIN} installed\033[0m"
       exit 1
     fi
+    # if use kubectl
     KUSTOMIZE_BIN="${KUBECTL_BIN}"
     USE_KUBECTL=true
+    SUB_COMMAND=build
   fi
 }
 
@@ -29,13 +37,6 @@ check_deps() {
   done
   [ $missed -eq 0 ]
 }
-
-WORKDIR=.
-SUB_COMMAND=""
-BOOL_FLAG=true
-SHOW_HELP=false
-declare -a GLOBAL_FLAGS=() SUB_FLAGS=() KUST_FILES=() KUST_DIRS=()
-CMDS="(build|cfg|completion|create|edit|fn|help|localize|version|docs-fn|docs-fn-spec|docs-io-annotations|docs-merge|docs-merge3|tutorials-command-basics|tutorials-function-basics)"
 
 parse_flags() {
   for flag in "$@"; do
@@ -137,9 +138,12 @@ if ! $(return 0 2>/dev/null); then
   get_kust_bin
   check_deps
   parse_flags "$@"
+
+  # if install as kubectl plugin
   if [ "$USE_KUBECTL" == true ]; then
-    set -- "${GLOBAL_FLAGS[@]}" kustomize "${SUB_FLAGS[@]}"
+    set -- kustomize "${SUB_FLAGS[@]}"
   fi
+
   if [ "${#KUST_DIRS[@]}" -lt 2 ] && [ "$SUB_COMMAND" == build ] && [ "$SHOW_HELP" == false ]; then
     build_wrapper "$@"
   fi
