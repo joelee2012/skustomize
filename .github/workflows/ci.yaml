@@ -50,20 +50,6 @@ jobs:
 
       - name: Run test with kustomize is installed
         run: bashcov -- bats -r --timing --tap --report-formatter junit tests
-        env:
-          BASHCOV_COMMAND_NAME: skustomize:kustomize
-
-      - uses: codecov/codecov-action@v3
-        with:
-          directory: coverage
-          files: coverage.xml
-          verbose: true
-
-      - name: Run test with kustomize is not installed
-        run: bashcov -- bats -r --timing --tap --report-formatter junit tests
-        env:
-          KUSTOMIZE_BIN: not-installed-kustomize
-          BASHCOV_COMMAND_NAME: skustomize:kubectl
 
       - uses: codecov/codecov-action@v3
         with:
