@@ -48,7 +48,7 @@ jobs:
           echo "BATS_LIB_PATH=$HOME/.local/node_modules" >> "$GITHUB_ENV"
           echo "SOPS_AGE_KEY_FILE=$PWD/tests/age/key.txt" >> "$GITHUB_ENV"
 
-      - name: Run test with kustomize is installed
+      - name: Run test
         run: bashcov -- bats -r --timing --tap --report-formatter junit tests
 
       - uses: codecov/codecov-action@v3
